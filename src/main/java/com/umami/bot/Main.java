@@ -3,6 +3,7 @@ package com.umami.bot;
 import com.umami.commands.Tps;
 import com.umami.database.DatabaseManager;
 import com.umami.eventListeners.CommandHandler;
+import com.umami.eventListeners.JoinEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.requests.GatewayIntent;
@@ -11,10 +12,13 @@ import net.dv8tion.jda.api.sharding.DefaultShardManagerBuilder;
 import net.dv8tion.jda.api.sharding.ShardManager;
 import net.dv8tion.jda.api.utils.MemberCachePolicy;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.Statement;
 
 public class Main extends ListenerAdapter {
     public static void main(String[] args) {
+        DatabaseManager db = null;
         try {
 
             //Register commands
@@ -53,17 +57,16 @@ public class Main extends ListenerAdapter {
             });
 
             //Database connexion
-            DatabaseManager db = new DatabaseManager("jdbc:mysql://", "localhost:3306", "umami", "root", "root");
+            db = new DatabaseManager("jdbc:mysql://", "localhost:3306", "umami", "root", "root");
             db.connexion();
+            //création des tables par défault
+            db.executeSQLScriptFromFile("src/main/resources/SQL/TABLE_ROLES.sql");
+            db.executeSQLScriptFromFile("src/main/resources/SQL/INSERT_ROLES.sql");
+            db.executeSQLScriptFromFile("src/main/resources/SQL/TABLE_USERS.sql");
 
-            // Exécution du script SQL
-            String selectDBScript = "USE umami;";
-            String createTableScript = "CREATE TABLE IF NOT EXISTS test (" +
-                    "    test VARCHAR(20)" +
-                    ");";
-            db.executeSQLScript(selectDBScript);
-            db.executeSQLScript(createTableScript);
-            System.out.println("Script SQL exécuté avec succès.");
+            //register database events
+            JoinEvent joinEvent = new JoinEvent(db);
+            shardManager.addEventListener(joinEvent);
 
             //Bot is ready
             System.out.println("Le bot est prêt !");

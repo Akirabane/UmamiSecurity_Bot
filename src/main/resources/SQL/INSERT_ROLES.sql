@@ -1,0 +1,1 @@
+INSERT INTO roles (id, role_name, role_servId, description) VALUES (1, 'ok', '1217882722501001316', 'default role');

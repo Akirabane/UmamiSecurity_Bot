@@ -1,9 +1,10 @@
 package com.umami.database;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.sql.*;
 
 public class DatabaseManager {
     private String urlBase;
@@ -26,7 +27,7 @@ public class DatabaseManager {
         if(!isOnline()) {
             try {
                 connection = DriverManager.getConnection(this.urlBase + this.host + "/" + this.database, this.userName, this.password);
-                System.out.println("§a[DatabaseManager] Connection réussie.");
+                System.out.println("§a[DatabaseManager] Connection réussie. " + getConnexion());
                 return;
             } catch (SQLException e) {
                 // TODO: handle exception
@@ -36,7 +37,7 @@ public class DatabaseManager {
     }
 
 
-    public static Connection getConnexion() {
+    public Connection getConnexion() {
         return connection;
     }
 
@@ -77,7 +78,45 @@ public class DatabaseManager {
                 e.printStackTrace();
             }
         } else {
-            System.out.println("[DatabaseManager] Connexion à la base de données non établie.");
+            System.out.println("[DatabaseManager] Script SQL en échec.");
+        }
+    }
+
+    public void executeSQLScriptFromFile(String filePath) {
+        String scriptContent = readScriptFromFile(filePath);
+        if (scriptContent != null) {
+            if (!isRolesTableNotEmpty()) { // Vérifie si la table roles est vide
+                try (PreparedStatement preparedStatement = connection.prepareStatement(scriptContent)) {
+                    preparedStatement.execute();
+                    System.out.println("[DatabaseManager] Script SQL exécuté avec succès.");
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    private boolean isRolesTableNotEmpty() {
+        try (PreparedStatement statement = connection.prepareStatement("SELECT COUNT(*) FROM roles")) {
+            ResultSet resultSet = statement.executeQuery();
+            if (resultSet.next()) {
+                int rowCount = resultSet.getInt(1);
+                return rowCount > 0; // Retourne true si la table roles contient des données
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return true; // Par défaut, considérer la table roles comme non vide en cas d'erreur
+    }
+
+    private String readScriptFromFile(String filePath) {
+        try {
+            Path path = Paths.get(filePath);
+            byte[] bytes = Files.readAllBytes(path);
+            return new String(bytes);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
         }
     }
 }
